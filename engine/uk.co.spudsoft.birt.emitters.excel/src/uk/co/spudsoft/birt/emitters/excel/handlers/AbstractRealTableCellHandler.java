@@ -1,5 +1,5 @@
 /*************************************************************************************
- * Copyright (c) 2011, 2012, 2013 James Talbut.
+ * Copyright (c) 2011, 2012, 2013, 2024, 2025 James Talbut and others
  *  jim-emitters@spudsoft.co.uk
  *
  *
@@ -165,7 +165,13 @@ public class AbstractRealTableCellHandler extends CellContentHandler {
 					}
 				}
 				if (newAddressRange) {
-					state.currentSheet.addMergedRegion(newMergedRegion);
+					try {
+						state.currentSheet.addMergedRegion(newMergedRegion);
+					} catch (IllegalStateException ise) {
+						log.error(0,
+								"Error of merged regions: " + ise.getLocalizedMessage(),
+								ise);
+					}
 				}
 
 				colSpan = cell.getColSpan();
@@ -254,20 +260,19 @@ public class AbstractRealTableCellHandler extends CellContentHandler {
 
 			state.setHandler(new NestedTableHandler(log, this, table, rowSpan));
 			state.getHandler().startTable(state, table);
-		} else if ((tableHandler != null) && (table.getColumnCount() <= colSpan) && !(element instanceof CellContent)) {
+		} else if ((tableHandler != null) && (table.getColumnCount() <= colSpan)) {
 			// This cell is merged over same number of columns as new table
 
 			containsTable = true;
 			parentRow = getAncestor(AbstractRealTableRowHandler.class);
 			interruptCell(state, false);
-
 			removeMergedCell(state, state.rowNum, state.colNum);
 
 			NestedTableHandler nestedTableHandler = new NestedTableHandler(log, this, table, rowSpan);
 			nestedTableHandler.setInserted(true);
 			state.setHandler(nestedTableHandler);
-			state.getHandler().startTable(state, table);
 
+			state.getHandler().startTable(state, table);
 		} else {
 			state.setHandler(new FlattenedTableHandler(this, log, this, table));
 			state.getHandler().startTable(state, table);
